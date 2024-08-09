@@ -72,7 +72,12 @@ type NotificationPayload struct {
 }
 
 func init() {
-	dsnpsql := "host=" + os.Getenv("DB_HOST") + " user=" + os.Getenv("PSQL_USER") + " password=" + os.Getenv("DB_PASS") + " dbname=testmemehunter" + os.Getenv("DB_NAME") + " port=5432"
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	dsnpsql := "host=" + os.Getenv("DB_HOST") + " user=" + os.Getenv("PSQL_USER") + " password=" + os.Getenv("DB_PASS") + " dbname=" + os.Getenv("DB_NAME") + " port=5432"
 	dbpsql, err = gorm.Open(postgres.Open(dsnpsql), &gorm.Config{})
 
 	dsnmysql := os.Getenv("MYSQL_USER") + ":" + os.Getenv("DB_PASS") + "@tcp(" + os.Getenv("DB_HOST") + ":3306)/" + os.Getenv("DB_NAME") + "?charset=utf8mb4&parseTime=True&loc=Local"
@@ -80,11 +85,6 @@ func init() {
 
 	if err != nil {
 		panic("failed to connect to database")
-	}
-
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file")
 	}
 
 	redisAddr := os.Getenv("REDIS_ADDR")

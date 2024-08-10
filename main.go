@@ -132,15 +132,8 @@ func loginUser(c *gin.Context) {
 
 	var user User
 	if err := dbpsql.Where("useraddress = ?", credentials.Useraddress).First(&user).Error; err != nil {
-		user := User{
-			Useraddress: c.PostForm("useraddress"),
-		}
-
-		if err := dbpsql.Create(&user).Error; err != nil {
-			log.Printf("Error saving user data to database: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save user data"})
-			return
-		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		return
 
 	}
 
@@ -267,10 +260,11 @@ func main() {
 	r.GET("/erc20/:useraddress", getErc20Transaction)
 	r.GET("/erc721/:useraddress", getErc721Transaction)
 
+	r.POST("/user", createProfile)
+
 	authorized := r.Group("/")
 	authorized.Use(AuthMiddleware())
 	{
-		authorized.POST("/user", createProfile)
 		authorized.GET("/user/:useraddress", getProfile)
 		authorized.PUT("/userupdate/:useraddress", updateProfile)
 	}

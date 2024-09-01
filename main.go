@@ -167,6 +167,46 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			// Token is either invalid or expired
+			if err != nil && jwt.IsValidationError(err, jwt.ValidationErrorExpired) {
+				// Handle expired token
+				claims, ok := token.Claims.(jwt.MapClaims)
+				if !ok {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+					c.Abort()
+					return
+				}
+
+				// Get user address from claims
+				useraddress, exists := claims["useraddress"].(string)
+				if !exists {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+					c.Abort()
+					return
+				}
+
+				// Generate a new token
+				newToken, err := generateToken(useraddress)
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate new token"})
+					c.Abort()
+					return
+				}
+
+				// Save the new token in cache
+				err = redisClient.Set(ctx, "token:"+newToken, useraddress, 24*time.Hour).Err()
+				if err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
+					c.Abort()
+					return
+				}
+
+				// Respond with the new token
+				c.JSON(http.StatusOK, gin.H{"token": newToken})
+				c.Abort()
+				return
+			}
+
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
